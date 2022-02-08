@@ -13,13 +13,21 @@ const GroupMessageSchema = mongoose.Schema(
         message: {
             type: String,
             required: true,
-            default:''
+            default: '<EMPTY>'
         },
         date_sent: {
-            type: Date
+            type: Date,
+            default: Date.now
         }
         
     }
 )
+// pre middleware - date sent
+GroupMessageSchema.pre('save', (next) => {
+    if(!this.date_sent){
+        this.date_sent = Date.now()
+    }
+    next()
+})
 
 module.exports = mongoose.model("GroupMessage", GroupMessageSchema);

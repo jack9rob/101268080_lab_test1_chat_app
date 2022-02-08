@@ -12,13 +12,21 @@ const PrivateMessageSchema = mongoose.Schema(
         }, 
         message: {
             type: String,
-            required: true
+            required: true,
+            default: '<EMPTY>'
         },
         date_sent: {
-            type: Date
+            type: Date,
+            default: Date.now
         }
         
     }
 )
-
+// pre middleware - date sent
+PrivateMessageSchema.pre('save', (next) => {
+    if(!this.date_sent){
+        this.date_sent = Date.now()
+    }
+    next()
+})
 module.exports = mongoose.model("PrivateMessage", PrivateMessageSchema);

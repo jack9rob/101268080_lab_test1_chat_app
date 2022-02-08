@@ -26,29 +26,39 @@ app.use(cookieParser())
 
 
 // default, login page
-app.get('/', (req, res) => {
+app.get('/login', (req, res) => {
     res.sendFile(__dirname + '/pages/login.html')
 })
 
 app.post('/login', async(req, res) => {
-    if(req != null && req.body!=null) {
+    if(req.body.username == '' || req.body.password == '') {
+        console.log('username or password empty')
+    }else {
         const user = await User.findOne({username: req.body.username})
-        if(user.password == req.body.password) {
-            res.cookie('username', user.username)
-            res.writeHead(301,
-                {Location: `http://localhost:3000/chat`}
-              );
-              res.end();
+        console.log(user)
+        if(user != null) {
+            if(user.password == req.body.password) {
+                res.cookie('username', user.username)
+                res.writeHead(301,
+                    {Location: `http://localhost:3000/chat`}
+                  );
+                  res.end();
+            }
         }
-    }else{
+    }
     res.writeHead(301,
-        {Location: 'http://localhost:3000/'}
+        {Location: 'http://localhost:3000/login'}
         );
         res.end();
-    }
+})
 
-
-
+app.get('/logout', (req, res) => {
+    res.clearCookie('username')
+    res.writeHead(301,
+        {Location: 'http://localhost:3000/login'}
+        );
+        res.end();
+    
 })
 
 app.get('/register', (req, res) => {
@@ -57,9 +67,8 @@ app.get('/register', (req, res) => {
 
 app.post('/register', async (req, res) =>{
     const takenUsername = await User.findOne({username: req.body.username})
-
     if(takenUsername) {
-        res.json({message: 'Username or email has already been taken'})
+        console.log('username taken')
     } else {
         const dbUser = new User({
             username: req.body.username,
@@ -67,12 +76,22 @@ app.post('/register', async (req, res) =>{
             firstname: req.body.firstname,
             lastname: req.body.lastname
         })
-        dbUser.save()
-        res.writeHead(301,
-            {Location: 'http://localhost:3000'}
-          );
-          res.end();
+        try{
+            const user = await dbUser.save()
+            console.log('user created')
+            res.writeHead(301,
+                {Location: '/login'}
+              );
+              res.end();
+        }
+        catch(err){
+            console.log(err)
+        }
     }
+    res.writeHead(301,
+        {Location: '/register'}
+      );
+      res.end();
 })
 
 app.get('/chat', (req, res) => {
@@ -87,7 +106,7 @@ io.on('connection', (socket) => {
 
     // welcome message
     const welcomeMessage = {
-        username: 'Sever',
+        username: 'Server',
         message: 'Welcome to the chat application'
     }
     socket.emit('welcome', welcomeMessage)
@@ -104,7 +123,15 @@ io.on('connection', (socket) => {
             username: data.username,
             message: data.message
         }
-        console.log(`${data.username} send a message to ${data.room}`)
+        console.log(`${data.username} sent a message to ${data.room}`)
+        // add messag to db
+        const dbGroupMessage = new GroupMessage({
+            from_user: data.username,
+            room: data.room,
+            message: data.message
+        })
+        dbGroupMessage.save()
+
         socket.broadcast.to(data.room).emit('newMessage', message)
     })
 
