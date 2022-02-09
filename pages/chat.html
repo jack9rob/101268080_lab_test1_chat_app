@@ -9,23 +9,27 @@
    <body>
      <main class='container'>
        <h1>Chat</h1>
-       <a class='btn btn-danger' href='/logout'>Logout</a>
+       <div>
+        <a class='btn btn-danger' href='/logout'>Logout</a>
+        <button class='btn btn-danger d-none' onclick="leaveRoom()" id='leaveRoomButton'>Leave Room</button>
+       </div>
        <div id='error-container'></div>
        <br/>
        <label for="rooms">Choose a room:</label>
        <select name="rooms" id="rooms" class=''>
-           <option value='gbc'>GBC</option>
-           <option value='hockey'>Hockey</option>
-           <option value='videogames'>Video games</option>
+           <option value='GBC'>GBC</option>
+           <option value='Hockey'>Hockey</option>
+           <option value='Videogames'>Video games</option>
        </select>
        <button onclick='joinRoom()' class='btn btn-success'>Join Room</button>
        <h1 id='roomName'></h1>
        <br/>
        <div id='sendmessage-container' class='d-none'>
-        <input id='roomMessage' type='text' name='roomMessage' value="" placeholder="Enter message to room">
+        <input id='roomMessage' type='text' name='roomMessage' value="" placeholder="Enter message to room" oninput="typing()">
         <button class='btn btn-primary' onClick='sendMessage()'>Send message</button>
+        <div id = "message-container"></div>
        </div>
-       <div id = "message-container"></div>
+       <div id='user-typing'></div>
       </main>
    </body>
 
@@ -41,7 +45,7 @@
        const client = io()
        
 
-       // Socket IO 
+       // sockit.io
        // welcome message
        client.on('welcome', (message) => {
             addMessage(message)
@@ -52,7 +56,7 @@
         addMessage(message)
        })
 
-       // functions 
+       // onclick functions
        // send message, to room
        function sendMessage() {
         message = document.getElementById('roomMessage').value
@@ -65,6 +69,7 @@
             message: message,
             username: username
           }
+          console.log(roomName)
           client.emit('messageRoom', messageSend)
           addMessage(messageSend)
           message.value=''
@@ -74,18 +79,20 @@
        // add message to display
        function addMessage(message){
         document.getElementById('message-container').innerHTML += `<div> ${message.username}: ${message.message} </div>`
-     }
+      }
 
        function joinRoom() {
            let roomNameH1 = document.getElementById('roomName')
            let roomNameTag = document.getElementById('rooms')
            let sendMessageContainer = document.getElementById('sendmessage-container')
            let messageContainer = document.getElementById('message-container')
+           let leaveRoomButton = document.getElementById('leaveRoomButton')
            let roomName = roomNameTag.options[roomNameTag.selectedIndex].value
 
            roomNameH1.innerHTML = roomName
            sendMessageContainer.classList.remove('d-none')
-           //messageContainer.innerHTML = ''
+           leaveRoomButton.classList.remove('d-none')
+           messageContainer.innerHTML = ''
            newRoomMessage = {
              message: `Joined new group - ${roomName}`,
              username: 'Server'
@@ -95,6 +102,22 @@
            client.emit('join', roomName)
        }
 
+       function leaveRoom() {
+        let roomNameH1 = document.getElementById('roomName')
+        let sendMessageContainer = document.getElementById('sendmessage-container')
+        let leaveRoomButton = document.getElementById('leaveRoomButton')
+
+        // clear roomname and messaging
+        roomNameH1.innerHTML = ''
+        sendMessageContainer.classList.add('d-none')
+        leaveRoomButton.classList.add('d-none')
+        document.getElementById('message-container').innerHTML= ''
+        
+        // send disconnect 
+        client.emit('join', 'default')
+       }
+
+       // get cookie values
        function getCookie(cname) {
         let name = cname + "=";
         let decodedCookie = decodeURIComponent(document.cookie);
@@ -109,6 +132,23 @@
           }
         }
         return "";
+      }
+
+      // user is typing
+      client.on('typing', (data) => {
+        document.getElementById('user-typing').innerHTML = `<div class='small text-muted'>${data.username} is typing</div>`
+        setTimeout(function(){
+          document.getElementById('user-typing').innerHTML = ''
+      }, 2000);
+      })
+
+      function typing() {
+        roomName = document.getElementById('roomName').innerHTML
+        data = {
+          roomName: roomName,
+          username: username
+        }
+        client.emit('typing', data)
       }
       
    </script>

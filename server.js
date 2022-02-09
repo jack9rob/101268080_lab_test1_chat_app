@@ -131,8 +131,13 @@ io.on('connection', (socket) => {
             message: data.message
         })
         dbGroupMessage.save()
+        console.log(data.room)
+        socket.to(data.room).emit('newMessage', message)
+    })
 
-        socket.broadcast.to(data.room).emit('newMessage', message)
+    // user is typing
+    socket.on('typing', (data)=> {
+        socket.to(data.roomName).emit('typing', {username: data.username})
     })
 
     // disconnect
